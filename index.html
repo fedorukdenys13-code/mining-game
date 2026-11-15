@@ -1,56 +1,573 @@
-import asyncio
-from aiogram import Bot, Dispatcher, F, types
-from aiogram.filters import CommandStart
-from aiogram.types import WebAppInfo, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mining Empire Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: var(--tg-theme-bg-color, #131722);
+            --card: var(--tg-theme-secondary-bg-color, #1e222d);
+            --text: var(--tg-theme-text-color, #ffffff);
+            --hint: var(--tg-theme-hint-color, #8b949e);
+            --accent: var(--tg-theme-button-color, #2ea6ff);
+            --accent-text: var(--tg-theme-button-text-color, #ffffff);
+            --green: #00c853;
+            --red: #ff5252;
+            --orange: #ffab00;
+        }
 
-# Вставте сюди ваш токен від @BotFather
-BOT_TOKEN = '8479721079:AAF1uGNqbUykPFg-Ol5Zg7uJ0A8f6sKG3gA'
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
 
-# Ваше посилання на гру (переконайтеся, що на Netlify сайт відкритий Public)
-WEB_APP_URL = 'https://flourishing-elf-d711fa.netlify.app'
+        body {
+            margin: 0;
+            padding: 16px 16px 85px 16px;
+            background-color: var(--bg);
+            color: var(--text);
+        }
 
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
+        .header-card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
 
+        .user-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: var(--hint);
+        }
 
-@dp.message(CommandStart())
-async def start(message: types.Message):
-    # Кнопка в нижньому меню клавіатури
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text='🚀 Грати в Mini App', web_app=WebAppInfo(url=WEB_APP_URL))]
-        ],
-        resize_keyboard=True
-    )
+        .balance {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
 
-    # Кнопка прямо під повідомленням у чаті
-    inline_markup = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text='🎮 Запустити гру', web_app=WebAppInfo(url=WEB_APP_URL))]
-        ]
-    )
+        .income-badge {
+            display: inline-block;
+            background: rgba(0, 200, 83, 0.15);
+            color: var(--green);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
 
-    await message.answer(
-        f'Привіт, {message.from_user.first_name}! Натискай кнопку нижче, щоб відкрити гру:',
-        reply_markup=reply_markup
-    )
-    await message.answer(
-        'Або відкрий через кнопку під повідомленням:',
-        reply_markup=inline_markup
-    )
+        .energy-box {
+            background: rgba(0,0,0,0.2);
+            padding: 10px 12px;
+            border-radius: 12px;
+        }
 
+        .energy-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
 
-# Обробка даних, якщо гра відправляє результат назад у бот через tg.sendData()
-@dp.message(F.web_app_data)
-async def handle_web_app_data(message: types.Message):
-    data = message.web_app_data.data
-    await message.answer(f'Отримано дані з гри: {data}')
+        .progress-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
 
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.3s ease, background 0.3s ease;
+        }
 
-async def main():
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+        .section { display: none; }
+        .section.active { display: block; }
 
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 12px 0;
+        }
 
-if __name__ == '__main__':
-    asyncio.run(main())
+        .item-card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .item-info h4 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+        }
+
+        .item-stats {
+            font-size: 12px;
+            color: var(--hint);
+            line-height: 1.4;
+        }
+
+        .status-working { color: var(--green); font-weight: 600; }
+        .status-sleeping { color: var(--orange); font-weight: 600; }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 95px;
+        }
+
+        button {
+            border: none;
+            border-radius: 10px;
+            padding: 9px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        button:active { transform: scale(0.95); }
+
+        .btn-buy {
+            background: var(--accent);
+            color: var(--accent-text);
+        }
+
+        .btn-buy:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-sell {
+            background: rgba(255, 82, 82, 0.15);
+            color: var(--red);
+            font-size: 11px;
+            padding: 6px 10px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            z-index: 100;
+        }
+
+        .nav-item {
+            background: none;
+            color: var(--hint);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 12px;
+            gap: 4px;
+            padding: 4px 12px;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+
+        .nav-icon { font-size: 20px; }
+
+        .toast {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2b313f;
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="header-card">
+        <div class="user-row">
+            <span id="player-name">👤 Гравець</span>
+            <span id="timer-badge">⏱️ Нарахування кожні 10с</span>
+        </div>
+        <div class="balance"><span id="balance">1</span> 🪙</div>
+        <div class="income-badge">⚡ Пасивний дохід: +<span id="income">0</span> 🪙 / 10 сек</div>
+
+        <div class="energy-box">
+            <div class="energy-labels">
+                <span>🔌 Енергія: <strong id="used-watts">0</strong>W / <strong id="total-watts">15</strong>W</span>
+                <span>Вільно: <strong id="free-watts">15</strong>W</span>
+            </div>
+            <div class="progress-bg">
+                <div class="progress-fill" id="energy-bar" style="width: 0%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-farm" class="section active">
+        <div class="section-title">⚙️ Мої відеокарти (майнери)</div>
+        <div id="my-miners-list"></div>
+
+        <div class="section-title">🔋 Мої блоки живлення</div>
+        <div id="my-ps-list"></div>
+    </div>
+
+    <div id="tab-miners" class="section">
+        <div class="section-title">🛒 Магазин відеокарт</div>
+        <div id="shop-miners-list"></div>
+    </div>
+
+    <div id="tab-ps" class="section">
+        <div class="section-title">🔌 Магазин блоків живлення</div>
+        <div id="shop-ps-list"></div>
+    </div>
+
+    <div id="tab-settings" class="section">
+        <div class="section-title">⚙️ Налаштування акаунта</div>
+        <div class="item-card" style="flex-direction: column; align-items: stretch;">
+            <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--hint);">
+                Ваш прогрес зберігається автоматично. Ви також можете надіслати свій поточний рахунок у чат бота.
+            </p>
+            <button class="btn-buy" onclick="syncWithBot()" style="margin-bottom: 10px; padding: 12px;">
+                📤 Зберегти прогрес у чат бота
+            </button>
+            <button class="btn-sell" onclick="resetProgress()" style="padding: 12px; font-size: 13px;">
+                🗑️ Скинути весь прогрес
+            </button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('farm', this)">
+            <span class="nav-icon">🏭</span>
+            <span>Ферма</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('miners', this)">
+            <span class="nav-icon">🛒</span>
+            <span>Майнери</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('ps', this)">
+            <span class="nav-icon">🔌</span>
+            <span>Живлення</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('settings', this)">
+            <span class="nav-icon">⚙️</span>
+            <span>Інше</span>
+        </button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const MINERS = [
+            { name: "Byte", price: 1.0, income: 0.05, watt: 1 },
+            { name: "Pulse", price: 5.0, income: 0.30, watt: 5 },
+            { name: "ApexV", price: 20.0, income: 1.14, watt: 20 },
+            { name: "Vortex", price: 100.0, income: 7.5, watt: 75 },
+            { name: "Quantum", price: 500.0, income: 30.0, watt: 225 },
+            { name: "Infinity", price: 7500.0, income: 800.0, watt: 480 }
+        ];
+
+        const POWER_SUPPLIES = [
+            { name: "Plan-b", price: 20.0, watts: 15 },
+            { name: "Corb", price: 90.0, watts: 75 },
+            { name: "Nikel", price: 350.0, watts: 450 },
+            { name: "Generator", price: 660.0, watts: 800 },
+            { name: "Grom", price: 1000.0, watts: 1350 },
+            { name: "Turbo-x", price: 2900.0, watts: 4505 }
+        ];
+
+        let state = JSON.parse(localStorage.getItem('mining_app_state')) || {
+            balance: 1.0,
+            miners: { Byte: 0, Pulse: 0, ApexV: 0, Vortex: 0, Quantum: 0, Infinity: 0 },
+            power_supplies: { "Plan-b": 1, Corb: 0, Nikel: 0, Generator: 0, Grom: 0, "Turbo-x": 0 },
+            last_online: Date.now()
+        };
+
+        const tgUser = tg.initDataUnsafe?.user;
+        if (tgUser) {
+            document.getElementById('player-name').innerText = `👤 ${tgUser.first_name}`;
+        }
+
+        function formatNum(num) {
+            return Number(num.toFixed(4)).toLocaleString('uk-UA', { maximumFractionDigits: 4 });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2200);
+        }
+
+        function calculateStats() {
+            let totalWatts = 0;
+            for (const ps of POWER_SUPPLIES) {
+                totalWatts += (state.power_supplies[ps.name] || 0) * ps.watts;
+            }
+            if (totalWatts === 0) {
+                state.power_supplies["Plan-b"] = 1;
+                totalWatts = 15;
+            }
+
+            let availableWatts = totalWatts;
+            let totalIncome = 0;
+            let minerStatus = {};
+
+            for (const m of MINERS) {
+                const count = state.miners[m.name] || 0;
+                let working = 0;
+                let sleeping = 0;
+
+                for (let i = 0; i < count; i++) {
+                    if (availableWatts >= m.watt) {
+                        availableWatts -= m.watt;
+                        working++;
+                        totalIncome += m.income;
+                    } else {
+                        sleeping++;
+                    }
+                }
+                minerStatus[m.name] = { count, working, sleeping };
+            }
+
+            const usedWatts = totalWatts - availableWatts;
+            return { totalWatts, usedWatts, availableWatts, totalIncome, minerStatus };
+        }
+
+        function applyOfflineEarnings() {
+            const now = Date.now();
+            const secondsPassed = Math.floor((now - (state.last_online || now)) / 1000);
+            if (secondsPassed >= 10) {
+                const ticks = Math.floor(secondsPassed / 10);
+                const { totalIncome } = calculateStats();
+                if (totalIncome > 0) {
+                    const earned = Number((totalIncome * ticks).toFixed(4));
+                    state.balance = Number((state.balance + earned).toFixed(4));
+                    showToast(`💤 Офлайн-дохід: +${formatNum(earned)} 🪙`);
+                }
+            }
+            state.last_online = now;
+            saveState();
+        }
+
+        function saveState() {
+            state.last_online = Date.now();
+            localStorage.setItem('mining_app_state', JSON.stringify(state));
+        }
+
+        function buyMiner(name) {
+            const m = MINERS.find(x => x.name === name);
+            if (state.balance >= m.price) {
+                state.balance = Number((state.balance - m.price).toFixed(4));
+                state.miners[name] = (state.miners[name] || 0) + 1;
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                saveState();
+                render();
+            }
+        }
+
+        function sellMiner(name) {
+            const m = MINERS.find(x => x.name === name);
+            if ((state.miners[name] || 0) > 0) {
+                state.miners[name] -= 1;
+                const refund = Number((m.price * 0.5).toFixed(4));
+                state.balance = Number((state.balance + refund).toFixed(4));
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+                showToast(`Продано ${name} за +${formatNum(refund)} 🪙`);
+                saveState();
+                render();
+            }
+        }
+
+        function buyPS(name) {
+            const ps = POWER_SUPPLIES.find(x => x.name === name);
+            if (state.balance >= ps.price) {
+                state.balance = Number((state.balance - ps.price).toFixed(4));
+                state.power_supplies[name] = (state.power_supplies[name] || 0) + 1;
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                saveState();
+                render();
+            }
+        }
+
+        function switchTab(tabName, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            btn.classList.add('active');
+            if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+        }
+
+        function resetProgress() {
+            if (confirm("Ви дійсно хочете скинути весь прогрес до початкового?")) {
+                state = {
+                    balance: 1.0,
+                    miners: { Byte: 0, Pulse: 0, ApexV: 0, Vortex: 0, Quantum: 0, Infinity: 0 },
+                    power_supplies: { "Plan-b": 1, Corb: 0, Nikel: 0, Generator: 0, Grom: 0, "Turbo-x": 0 },
+                    last_online: Date.now()
+                };
+                saveState();
+                render();
+                showToast("🗑️ Прогрес скинуто!");
+            }
+        }
+
+        function syncWithBot() {
+            const { totalIncome } = calculateStats();
+            const payload = JSON.stringify({
+                balance: state.balance,
+                income: totalIncome
+            });
+            tg.sendData(payload);
+        }
+
+        function render() {
+            const { totalWatts, usedWatts, availableWatts, totalIncome, minerStatus } = calculateStats();
+
+            document.getElementById('balance').innerText = formatNum(state.balance);
+            document.getElementById('income').innerText = formatNum(totalIncome);
+            document.getElementById('used-watts').innerText = usedWatts;
+            document.getElementById('total-watts').innerText = totalWatts;
+            document.getElementById('free-watts').innerText = availableWatts;
+
+            const pct = Math.min(100, Math.round((usedWatts / totalWatts) * 100));
+            const bar = document.getElementById('energy-bar');
+            bar.style.width = pct + '%';
+            bar.style.background = pct >= 90 ? 'var(--orange)' : 'var(--accent)';
+
+            const myMinersEl = document.getElementById('my-miners-list');
+            myMinersEl.innerHTML = '';
+            let hasAnyMiner = false;
+
+            for (const m of MINERS) {
+                const st = minerStatus[m.name];
+                if (st.count > 0) {
+                    hasAnyMiner = true;
+                    myMinersEl.innerHTML += `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <h4>${m.name} (${st.count} шт.)</h4>
+                                <div class="item-stats">
+                                    <span class="status-working">🟢 Працює: ${st.working}</span>
+                                    ${st.sleeping > 0 ? `<br><span class="status-sleeping">💤 Спить (мало Ват): ${st.sleeping}</span>` : ''}
+                                    <br>Дохід: +${formatNum(st.working * m.income)} 🪙 / 10с
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn-sell" onclick="sellMiner('${m.name}')">Продати (+${formatNum(m.price * 0.5)}🪙)</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            if (!hasAnyMiner) {
+                myMinersEl.innerHTML = `<p style="color: var(--hint); font-size: 14px;">У вас ще немає відеокарт. Купіть першу у вкладці «Майнери»!</p>`;
+            }
+
+            const myPsEl = document.getElementById('my-ps-list');
+            myPsEl.innerHTML = '';
+            for (const ps of POWER_SUPPLIES) {
+                const count = state.power_supplies[ps.name] || 0;
+                if (count > 0) {
+                    myPsEl.innerHTML += `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <h4>${ps.name} (${count} шт.)</h4>
+                                <div class="item-stats">Потужність: +${count * ps.watts}W</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            const shopMinersEl = document.getElementById('shop-miners-list');
+            shopMinersEl.innerHTML = '';
+            for (const m of MINERS) {
+                const canBuy = state.balance >= m.price;
+                shopMinersEl.innerHTML += `
+                    <div class="item-card">
+                        <div class="item-info">
+                            <h4>${m.name} <span style="font-size:12px; color:var(--hint);">(${state.miners[m.name] || 0} шт.)</span></h4>
+                            <div class="item-stats">
+                                ⚡ Дохід: +${formatNum(m.income)} 🪙 / 10с<br>
+                                🔌 Споживання: ${m.watt}W
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn-buy" ${canBuy ? '' : 'disabled'} onclick="buyMiner('${m.name}')">
+                                ${formatNum(m.price)} 🪙
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const shopPsEl = document.getElementById('shop-ps-list');
+            shopPsEl.innerHTML = '';
+            for (const ps of POWER_SUPPLIES) {
+                const canBuy = state.balance >= ps.price;
+                shopPsEl.innerHTML += `
+                    <div class="item-card">
+                        <div class="item-info">
+                            <h4>${ps.name} <span style="font-size:12px; color:var(--hint);">(${state.power_supplies[ps.name] || 0} шт.)</span></h4>
+                            <div class="item-stats">🔋 Потужність: +${ps.watts}W</div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn-buy" ${canBuy ? '' : 'disabled'} onclick="buyPS('${ps.name}')">
+                                ${formatNum(ps.price)} 🪙
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        setInterval(() => {
+            const { totalIncome } = calculateStats();
+            if (totalIncome > 0) {
+                state.balance = Number((state.balance + totalIncome).toFixed(4));
+                saveState();
+                render();
+            }
+        }, 10000);
+
+        applyOfflineEarnings();
+        render();
+    </script>
+</body>
+</html>
